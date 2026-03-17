@@ -149,23 +149,22 @@ export default nextConfig;
 EOF
 
 # Patch page.js to use relative /api paths (idempotent)
-python3 - << 'PYEOF'
-import re
-path = "/frontend/app/page.js"
-import os, sys
-repo = os.environ.get("REPO_ROOT", "")
-fullpath = repo + path
-with open(fullpath, "r") as f:
+PAGE_JS="$REPO_ROOT/frontend/app/page.js"
+echo "Patching: $PAGE_JS"
+python3 -c "
+import re, sys
+path = sys.argv[1]
+with open(path, 'r') as f:
     content = f.read()
 content = re.sub(r'const API_URL.*\n', '', content)
-content = re.sub(r'https?://[^"\'`\s]*:8000/aws-context', '/api/aws-context', content)
-content = re.sub(r'https?://[^"\'`\s]*:8000/chat', '/api/chat', content)
-content = content.replace('fetch(`${API_URL}/aws-context`)', 'fetch("/api/aws-context")')
-content = content.replace('fetch(`${API_URL}/chat`', 'fetch("/api/chat"')
-with open(fullpath, "w") as f:
+content = re.sub(r'https?://[^\"\x27\`\s]*:8000/aws-context', '/api/aws-context', content)
+content = re.sub(r'https?://[^\"\x27\`\s]*:8000/chat', '/api/chat', content)
+content = content.replace('fetch(\`\${API_URL}/aws-context\`)', 'fetch("/api/aws-context")')
+content = content.replace('fetch(\`\${API_URL}/chat\`', 'fetch("/api/chat"')
+with open(path, 'w') as f:
     f.write(content)
-print("✅ Frontend API URLs patched to use proxy")
-PYEOF
+print('Frontend API URLs patched OK')
+" "$PAGE_JS"
 
 cd "$REPO_ROOT/frontend"
 npm install -q
